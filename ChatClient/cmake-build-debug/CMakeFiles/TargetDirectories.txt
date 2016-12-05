@@ -1,0 +1,3 @@
+/home/emam/Public/Programming/Projects/Clion/ChatClient/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/home/emam/Public/Programming/Projects/Clion/ChatClient/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/emam/Public/Programming/Projects/Clion/ChatClient/cmake-build-debug/CMakeFiles/ChatClient.dir

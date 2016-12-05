@@ -1,0 +1,4 @@
+/home/emam/Public/Programming/cmake/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" /home/emam/Public/Programming/Projects/Clion/chatService
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/emam/Public/Programming/Projects/Clion/chatService/cmake-build-debug
