@@ -8,15 +8,9 @@
 
 #include "helperheaders.h"
 
-int initServer();
-
-void terminateServer(int sockfd);
-
 int rsend(int sockfd, sockaddr_storage their_addr, socklen_t addr_len, const packet p);
 
-void thSend(int sockfd, sockaddr_storage their_addr, socklen_t addr_len);
-
-void thRecieve(int sockfd, sockaddr_storage their_addr, socklen_t addr_len);
+void thRecieve(int sockfd);
 
 void calcCheckSum(packet p);
 

@@ -7,6 +7,7 @@
 #include <netdb.h>
 #include <vector>
 #include <cstring>
+#include <queue>
 
 #include "helperheaders.h"
 #include "sockhelpers.h"
@@ -17,6 +18,10 @@ int main()
     int id = 0;
     std::vector<entity> entities;
     entities.reserve(10);
+    std::queue<std::string> mq;
+
+    std::thread bthread(broadcast, std::ref(mq), std::ref(entities));
+    bthread.detach();
 
     while(1)
     {
@@ -44,22 +49,15 @@ int main()
         std::cout << "Server connected to ip " << ipstr << " port " << portstr << " id no " << id << std::endl;
 
         entity e;
-        e.lastRecieved = 0;
-        e.lastSent = -1;
+        e.addr = ipstr;
+        e.port = portstr;
         e.name = buf;
-        strcpy(e.buffer, "has entered chat");
-        entities.push_back(e);
+        e.id = id;
 
-        std::thread thread1(thSend, id, ipstr, portstr, std::ref(entities));
-        thread1.detach();
+        std::thread thread(clientRecieve, e, std::ref(mq), std::ref(entities));
+        thread.detach();
 
-        sleep(3);
-
-        std::thread thread2(thRecieve, id, std::ref(entities));
-        thread2.detach();
         id++;
-
-
     }
 
     //we can set a condition to break the loop and terminate server

@@ -18,7 +18,7 @@ int main()
     struct addrinfo hints, *servinfo, *p;
     int rv;
     int numbytes;
-    char* msg;
+    char msg[50];
     std::string input;
 
     std::cout << "Enter Your Name: " << std::endl;
@@ -72,21 +72,33 @@ int main()
         exit(1);
     }
 
-    //std::cout << pack.data << std::endl;
+    //cstd::cout << pack.data << std::endl;
 
     ack.ackno = pack.seqno;
     sendto(sockfd, &ack, sizeof(ack), 0, (struct sockaddr *)&their_addr, addr_len);
 
+    std::thread thread(thRecieve, sockfd);
+    thread.detach();
 
-    std::thread thread2(thRecieve, sockfd, their_addr, addr_len);
+    packet pack2;
+    pack2.seqno = 0;
 
-    sleep(3);
+    while(1)
+    {
+        input.clear();
+        std::cin.clear();
 
-    std::thread thread1(thSend, sockfd, their_addr, addr_len);
+        std::cin >> input;
 
+        strcpy(pack2.data, input.c_str());
 
-    thread1.join();
-    thread2.join();
+        if ((rsend(sockfd, their_addr, addr_len, pack2)) == -1) {
+            perror("Server: sendto");
+            return 1;
+        }
+
+        pack2.seqno = (pack2.seqno + 1) % 2;
+    }
 
     /*
     while(1)

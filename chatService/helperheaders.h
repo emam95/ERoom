@@ -31,9 +31,10 @@ struct entity
 {
     int sockfd;
     std::string name;
-    int lastSent;
-    int lastRecieved;
-    char buffer[450];
+    std::string addr;
+    std::string port;
+    int id;
+    struct addrinfo *ai;
 };
 
 #endif //CHATSERVICE_HELPERHEADERS_H

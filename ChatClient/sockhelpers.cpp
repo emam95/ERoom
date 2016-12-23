@@ -5,69 +5,10 @@
 #include <iostream>
 #include <vector>
 #include <sys/socket.h>
-#include <netdb.h>
 #include <string.h>
-#include <unistd.h>
 #include <mutex>
 
 #include "sockhelpers.h"
-
-std::mutex mu;
-
-int initServer()
-{
-    struct addrinfo hints, *servinfo, *p;
-    int err;
-    int sockfd;
-
-    memset(&hints, 0, sizeof hints);
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_DGRAM;
-    hints.ai_flags = AI_PASSIVE; // use my IP
-
-    if ((err = getaddrinfo(NULL, MAINPORT, &hints, &servinfo)) != 0)
-    {
-        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(err));
-        exit(1);
-    }
-
-    // loop through all the results and bind to the first we can
-    for(p = servinfo; p != NULL; p = p->ai_next)
-    {
-        if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
-        {
-            perror("listener: socket");
-            continue;
-        }
-
-        if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1)
-        {
-            close(sockfd);
-            perror("listener: bind");
-            continue;
-        }
-
-        break;
-    }
-
-    if (p == NULL)
-    {
-        fprintf(stderr, "listener: failed to bind socket\n");
-        exit(1);
-    }
-
-    freeaddrinfo(servinfo);
-
-    std::cout << "Server: waiting for connections..." << std::endl;
-
-    return sockfd;
-
-}
-
-void terminateServer(int sockfd)
-{
-    close(sockfd);
-}
 
 int rsend(int sockfd, sockaddr_storage their_addr, socklen_t addr_len, const packet p)
 {
@@ -118,39 +59,13 @@ int rsend(int sockfd, sockaddr_storage their_addr, socklen_t addr_len, const pac
     return 0;
 }
 
-void thSend(int sockfd,sockaddr_storage their_addr, socklen_t addr_len)
-{
-    packet pack;
-    pack.seqno = 0;
-    char msg[50];
-    std::string input;
-    while(1)
-    {
-        input.clear();
-        std::cin.clear();
-
-        std::cin >> input;
-
-        strcpy(msg, input.c_str());
-
-        strcpy(pack.data, msg);
-
-        if ((rsend(sockfd, their_addr, addr_len, pack)) == -1)
-        {
-            perror("Server: sendto");
-            return;
-        }
-
-        pack.seqno = (pack.seqno + 1) % 2;
-
-    }
-}
-
-void thRecieve(int sockfd, sockaddr_storage their_addr, socklen_t addr_len)
+void thRecieve(int sockfd)
 {
     int numbytes;
     packet pack;
     ack_packet ack;
+    sockaddr_storage their_addr;
+    socklen_t addr_len;
 
     while(1)
     {
@@ -162,10 +77,10 @@ void thRecieve(int sockfd, sockaddr_storage their_addr, socklen_t addr_len)
 
         ack.ackno = pack.seqno;
 
-        double r = ((double) rand() / (RAND_MAX));
+        //double r = ((double) rand() / (RAND_MAX));
 
         //if(r < 0.9 && checksumValid(pack))
-        if(r < 0.9)
+        //if(r < 0.9)
             sendto(sockfd, &ack, sizeof(ack), 0, (struct sockaddr *)&their_addr, addr_len);
 
         if(strcmp(pack.data, ""))

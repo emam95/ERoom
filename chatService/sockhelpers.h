@@ -14,12 +14,16 @@ void terminateServer(int sockfd);
 
 int rsend(int sockfd, addrinfo* ai, packet p);
 
-void thSend(int id, const std::string addr, std::string port, std::vector<entity> &entities);
+void clientRecieve( entity e, std::queue<std::string> &mq, std::vector<entity> &entities );
 
-void thRecieve(int id, std::vector<entity> &entities);
+void broadcast(std::queue<std::string> &mq, std::vector<entity> &entities);
 
-void calcCheckSum(packet p);
+//void thSend(int id, const std::string addr, std::string port, std::vector<entity> &entities);
 
-bool checksumValid(packet p);
+//void thRecieve(int id, std::vector<entity> &entities);
+
+//void calcCheckSum(packet p);
+
+//bool checksumValid(packet p);
 
 #endif //CHATSERVICE_SOCKHELPERS_H
