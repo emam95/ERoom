@@ -13,6 +13,8 @@
 #include <fstream>
 #include "sockhelpers.h"
 
+#define ISspace(x) isspace((int)(x))
+
 std::mutex mu;
 
 int initServer()
@@ -271,7 +273,7 @@ void writeFile(const std::string* name, const char* buffer)
 void serialize(const char* buffer, int size, std::vector<packet>& spackets)
 {
     packet lenpack;
-    sprintf(lenpack.data, "n: %d", (int)(size/500.0+0.5));
+    sprintf(lenpack.data, "$%d", (int)(size/500.0+0.5));
     spackets.push_back(lenpack);
     for(int i = 0; i < size; i++)
     {
@@ -290,151 +292,187 @@ void serialize(const char* buffer, int size, std::vector<packet>& spackets)
     }
 }
 
-void deserialize(const std::vector<packet>* spackets, std::string* buffer)
+void deserialize(const std::vector<packet>& spackets, char* buffer)
 {
 
 }
 
-void gbnsend();
-
-void gbnrecieve();
-
-void sendFile()
+int gbnsend(const std::vector<packet>& spackets, int windowSize, int sockfd, addrinfo* ai)
 {
-    char s[200 * 1024];
-    std::string name1("uniform_buffer_object.txt");
-    std::string name2("output.txt");
-    std::vector<packet> sp;
-    int size;
+    int npackets = spackets.size();
+    int base = 0;
+    int sentNotAck = base;
+    int N = windowSize - 1;
 
-    size = readFile(&name1, s);
-    writeFile(&name2, s);
-    serialize(s, size, sp);
-}
-
-void receiveFile();
-
-/*
-void thSend(int id, const std::string addr, std::string port, std::vector<entity> &ents)
-{
-    struct addrinfo hints, *servinfo, *ai;
-    int err;
-    int sockfd;
-    std::vector<entity> entities(ents);
-
-    memset(&hints, 0, sizeof hints);
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_DGRAM;
-
-    if ((err = getaddrinfo(addr.c_str(), port.c_str(), &hints, &servinfo)) != 0)
+    while((sentNotAck < N) && (N < npackets))
     {
-        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(err));
-        return;
+        packet p = spackets[sentNotAck];
+        if ((sendto(sockfd, &p, sizeof(p), 0, ai->ai_addr, ai->ai_addrlen)) == -1)
+        {
+            perror("GBN: sendto");
+            return -1;
+        }
+        sentNotAck++;
     }
 
-    // loop through all the results and make a socket
-    for(ai = servinfo; ai != NULL; ai = ai->ai_next)
+    while(base < npackets)
     {
-        if ((sockfd = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol)) == -1) {
-            perror("talker: socket");
+        fd_set set;
+        struct timeval timeout;
+        FD_ZERO(&set); // clear the set
+        FD_SET(sockfd, &set); // add our file descriptor to the set
+        timeout.tv_sec = 1;
+        timeout.tv_usec = 0;
+        int rv = select(sockfd + 1, &set, NULL, NULL, &timeout);
+        if (rv == -1)
+        {
+            perror("socket error");
+            return -1;
+        }
+        else if (rv == 0)
+        {
+            // timeout, socket does not have anything to read
+            std::cout << "time out occured: Resending window" << std::endl;
+            sentNotAck = base;
+            while(sentNotAck < N)
+            {
+                packet p = spackets[sentNotAck];
+                if ((sendto(sockfd, &p, sizeof(p), 0, ai->ai_addr, ai->ai_addrlen)) == -1)
+                {
+                    perror("GBN: sendto");
+                    return -1;
+                }
+                sentNotAck++;
+            }
+
             continue;
         }
-
-        break;
-    }
-
-    if (ai == NULL)
-    {
-        fprintf(stderr, "talker: failed to create socket\n");
-        return;
-    }
-
-    packet pack;
-    pack.seqno = 0;
-    sprintf(pack.data, "id: %d", id);
-
-    mu.lock();
-    ents[id].sockfd = sockfd;
-    mu.unlock();
-
-    if ((rsend(sockfd, ai, pack)) == -1)
-    {
-        perror("Server: sendto");
-        return;
-    }
-
-    freeaddrinfo(servinfo);
-
-    while(1)
-    {
-        if(ents.size() > entities.size())
+        else
         {
-            entity t = ents.back();
-            entities.push_back(t);
-        }
-
-        for(int i = 0; i < entities.size(); i++)
-        {
-            entity e = entities[i];
-            strcpy(e.buffer, ents[i].buffer);
-
-            if(ents[i].lastRecieved != e.lastSent)
+            ack_packet ack;
+            // socket has something to read
+            if ((recvfrom(sockfd, &ack, sizeof(ack) , 0, nullptr, nullptr) == -1))
             {
-                std::string name = e.name;
-                if(!strcmp(e.buffer, ""))
-                    continue;
-                std::string message = name + ": " + e.buffer;
-                strcpy(pack.data, message.c_str());
-                pack.seqno = (pack.seqno + 1) % 2;
-                pack.len = sizeof(pack.data);
-                calcCheckSum(pack);
-
-                if ((rsend(sockfd, ai, pack)) == -1)
-                {
-                    perror("Server: sendto");
-                    return;
-                }
-                entities[i].lastSent++;
+                perror("recvfrom");
+                exit(1);
             }
+            if(ack.ackno > base)
+            {
+                int delta = ack.ackno - base;
+                base += delta;
+                N = min(N + delta, npackets);
+                while(sentNotAck < N)
+                {
+                    packet p = spackets[sentNotAck];
+                    if ((sendto(sockfd, &p, sizeof(p), 0, ai->ai_addr, ai->ai_addrlen)) == -1)
+                    {
+                        perror("GBN: sendto");
+                        return -1;
+                    }
+                    sentNotAck++;
+                }
+
+            }
+
+            continue;
         }
     }
 
 }
 
-void thRecieve(int id, std::vector<entity> &entities)
+void gbnrecieve(std::vector<packet> &sp, int sockfd, addrinfo* ai)
 {
-    int sockfd = entities[id].sockfd;
+    int esqn = 0;
     int numbytes;
-    struct sockaddr_storage their_addr;
-    socklen_t addr_len;
-    addr_len = sizeof their_addr;
-    packet pack;
-    ack_packet ack;
+    int npackets;
+    int received = 0;
+    packet lenpack;
 
-    while(1)
+    if ((numbytes = recvfrom(sockfd, &lenpack, sizeof(lenpack) , 0, nullptr, nullptr)) == -1)
     {
-        if ((numbytes = recvfrom(sockfd, &pack, sizeof(pack) , 0, (struct sockaddr *)&their_addr, &addr_len)) == -1)
+        perror("recvfrom");
+        exit(1);
+    }
+    std::vector<std::string> output;
+    parseAt(lenpack.data, sizeof(lenpack.data), output, '$');
+
+    for(int i = 0; i < output.size(); i++)
+        std::cout << output[i] << std::endl;
+
+    npackets = std::stoi(output[0]);
+
+    while(received < npackets)
+    {
+        packet pack;
+        if ((numbytes = recvfrom(sockfd, &pack, sizeof(pack) , 0, nullptr, nullptr)) == -1)
         {
             perror("recvfrom");
             exit(1);
         }
 
-        ack.ackno = pack.seqno;
+        ack_packet ack;
+        ack.ackno = esqn;
 
-        sendto(sockfd, &ack, sizeof(ack), 0, (struct sockaddr *)&their_addr, addr_len);
-
-        strcpy(entities[id].buffer, pack.data);
-        if(strcmp(pack.data, ""))
+        if(esqn == pack.seqno)
         {
-            std::cout << pack.data << std::endl;
-            strcpy(pack.data, "");
-            entities[id].lastRecieved++;
+            sendto(sockfd, &ack, sizeof(ack), 0, ai->ai_addr, ai->ai_addrlen );
+            sp.push_back(pack);
+            esqn++;
+            received++;
         }
 
     }
 }
 
-void calcCheckSum(packet p)
+void sendFile()
+{
+    char s[200 * 1024];
+    std::string name1("uniform_buffer_object.txt");
+    std::vector<packet> sp;
+    int size;
+
+    size = readFile(&name1, s);
+    serialize(s, size, sp);
+}
+
+void receiveFile()
+{
+    char s[200 * 1024];
+    std::string name2("output.txt");
+    std::vector<packet> sp;
+    deserialize(sp, s);
+
+    writeFile(&name2, s);
+}
+
+int min(int x, int y)
+{
+    if(x<y)
+        return x;
+    return y;
+}
+
+void parseAt(const char* buffer, int size, std::vector<std::string>& output, char c)
+{
+    for(int i = 0; i < size; i++)
+    {
+        std::string s("");
+        while(!ISspace(buffer[i]) && buffer[i] != c && i < size)
+        {
+            s.push_back(buffer[i]);
+            i++;
+        }
+        if(strcmp(s.c_str(), ""))
+        {
+            output.push_back(s);
+        }
+
+    }
+}
+
+
+
+void calcCheckSum(packet& p)
 {
     int sum = 0;
     for(int i = 0; i < (p.len-1); ++i)
@@ -469,5 +507,3 @@ bool checksumValid(packet p)
 
     return (p.cksum == twoscompl);
 }
-
- */

@@ -24,22 +24,22 @@ void writeFile(const std::string* name, const char* buffer);
 
 void serialize(const char* buffer, int size, std::vector<packet>& spackets);
 
-void deserialize(const std::vector<packet>* spackets, std::string* buffer);
+void deserialize(const std::vector<packet>& spackets, char* buffer);
 
-void gbnsend();
+int gbnsend(const std::vector<packet>& spackets, int windowSize, int sockfd, addrinfo* ai);
 
-void gbnrecieve();
+void gbnrecieve(std::vector<packet> &sp, int sockfd, addrinfo* ai);
 
 void sendFile();
 
 void receiveFile();
 
-//void thSend(int id, const std::string addr, std::string port, std::vector<entity> &entities);
+int min(int x, int y);
 
-//void thRecieve(int id, std::vector<entity> &entities);
+void parseAt(const char* buffer, int size, std::vector<std::string>& output, char c);
 
-//void calcCheckSum(packet p);
+void calcCheckSum(packet& p);
 
-//bool checksumValid(packet p);
+bool checksumValid(packet p);
 
 #endif //CHATSERVICE_SOCKHELPERS_H
