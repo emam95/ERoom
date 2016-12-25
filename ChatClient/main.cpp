@@ -18,13 +18,13 @@ int main()
     struct addrinfo hints, *servinfo, *p;
     int rv;
     int numbytes;
-    char msg[50];
-    std::string input;
+    char msg[100];
+    //std::string input;
 
     std::cout << "Enter Your Name: " << std::endl;
-    std::cin >> input;
+    std::cin.getline(msg, sizeof(msg));
 
-    strcpy(msg, input.c_str());
+    //strcpy(msg, input.c_str());
 
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_UNSPEC;
@@ -85,12 +85,12 @@ int main()
 
     while(1)
     {
-        input.clear();
+        //input.clear();
         std::cin.clear();
 
-        std::cin >> input;
+        std::cin.getline(msg,sizeof(msg));
 
-        strcpy(pack2.data, input.c_str());
+        strcpy(pack2.data, msg);
 
         if ((rsend(sockfd, their_addr, addr_len, pack2)) == -1) {
             perror("Server: sendto");

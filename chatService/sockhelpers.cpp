@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <mutex>
 #include <queue>
+#include <fstream>
 #include "sockhelpers.h"
 
 std::mutex mu;
@@ -227,6 +228,91 @@ void broadcast(std::queue<std::string> &mq, std::vector<entity> &entities)
         usleep(1000);
     }
 }
+
+int readFile(const std::string* name, char* buffer)
+{
+
+    std::streampos size;
+    char* memblock;
+    int len;
+
+    //std::ifstream file ("example.bin", ios::in|ios::binary|ios::ate);
+    std::ifstream file (name->c_str(), std::ios::in|std::ios::ate);
+    if (file.is_open())
+    {
+        size = file.tellg();
+        memblock = new char [size];
+        len = size;
+        file.seekg (0, std::ios::beg);
+        file.read (memblock, size);
+        file.close();
+
+        memcpy(buffer, memblock, size);
+
+        delete[] memblock;
+    }
+    else std::cout << "Unable to open file" << std::endl;
+
+    return len;
+
+}
+
+void writeFile(const std::string* name, const char* buffer)
+{
+    std::ofstream myfile (name->c_str());
+    if (myfile.is_open())
+    {
+        myfile << buffer;
+        myfile.close();
+    }
+    else std::cout << "Unable to open file" << std::endl;
+}
+
+void serialize(const char* buffer, int size, std::vector<packet>& spackets)
+{
+    packet lenpack;
+    sprintf(lenpack.data, "n: %d", (int)(size/500.0+0.5));
+    spackets.push_back(lenpack);
+    for(int i = 0; i < size; i++)
+    {
+        packet p;
+        for(int j = 0; j < 500; j++)
+        {
+            if(i < size)
+            {
+                p.data[j] = buffer[i];
+                i++;
+            }
+            else
+                break;
+        }
+        spackets.push_back(p);
+    }
+}
+
+void deserialize(const std::vector<packet>* spackets, std::string* buffer)
+{
+
+}
+
+void gbnsend();
+
+void gbnrecieve();
+
+void sendFile()
+{
+    char s[200 * 1024];
+    std::string name1("uniform_buffer_object.txt");
+    std::string name2("output.txt");
+    std::vector<packet> sp;
+    int size;
+
+    size = readFile(&name1, s);
+    writeFile(&name2, s);
+    serialize(s, size, sp);
+}
+
+void receiveFile();
 
 /*
 void thSend(int id, const std::string addr, std::string port, std::vector<entity> &ents)
