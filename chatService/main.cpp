@@ -14,7 +14,7 @@
 
 int main()
 {
-    int lis_sockfd = initServer();
+    int lis_sockfd = initServer(NULL, MAINPORT);
     int id = 0;
     std::vector<entity> entities;
     entities.reserve(10);

@@ -1,1 +1,0 @@
-/usr/bin/c++    -std=c++11 -pthread -g   CMakeFiles/ChatClient.dir/main.cpp.o CMakeFiles/ChatClient.dir/sockhelpers.cpp.o  -o ChatClient 

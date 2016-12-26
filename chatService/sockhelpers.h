@@ -8,7 +8,9 @@
 
 #include "helperheaders.h"
 
-int initServer();
+int initServer(const char* name, const char* port);
+
+int createSocket(const char* addr, const char* port, struct addrinfo **outai);
 
 void terminateServer(int sockfd);
 
@@ -28,15 +30,19 @@ void deserialize(const std::vector<packet>& spackets, char* buffer);
 
 int gbnsend(const std::vector<packet>& spackets, int windowSize, int sockfd, addrinfo* ai);
 
-void gbnrecieve(std::vector<packet> &sp, int sockfd, addrinfo* ai);
+int gbnsend(const std::vector<packet>& spackets, int windowSize, int sockfd, sockaddr_storage their_addr);
 
-void sendFile();
+void gbnrecieve(std::vector<packet> &sp, int sockfd);
 
-void receiveFile();
+void sendFile(const std::string &fileName,sockaddr_storage their_addr);
+
+void receiveFile(const std::string &fileName, sockaddr_storage their_addr);
 
 int min(int x, int y);
 
 void parseAt(const char* buffer, int size, std::vector<std::string>& output, char c);
+
+void parseAt(const char* buffer, int size, std::vector<std::string>& output, char c, bool ignorespace);
 
 void calcCheckSum(packet& p);
 
