@@ -216,6 +216,7 @@ void thRecieve(int sockfd)
     ack_packet ack;
     sockaddr_storage their_addr;
     socklen_t addr_len;
+    int n = 0;
 
     while(1)
     {
@@ -227,16 +228,17 @@ void thRecieve(int sockfd)
 
         ack.ackno = pack.seqno;
 
-        double r = ((double) rand() / (RAND_MAX));
+        //double r = ((double) rand() / (RAND_MAX));
 
         //if(r < 0.9 && checksumValid(pack))
-            sendto(sockfd, &ack, sizeof(ack), 0, (struct sockaddr *)&their_addr, addr_len);
+        sendto(sockfd, &ack, sizeof(ack), 0, (struct sockaddr *)&their_addr, addr_len);
 
-        if(strcmp(pack.data, ""))
+        if(strcmp(pack.data, "") && n != 1)
         {
             std::cout << pack.data << std::endl;
             strcpy(pack.data, "");
         }
+        n++;
 
     }
 }

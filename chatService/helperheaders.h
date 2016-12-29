@@ -34,6 +34,7 @@ struct entity
     std::string addr;
     std::string port;
     int id;
+    int cid;
     struct addrinfo *ai;
 };
 

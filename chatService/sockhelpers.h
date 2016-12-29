@@ -5,14 +5,19 @@
 #ifndef CHATSERVICE_SOCKHELPERS_H
 #define CHATSERVICE_SOCKHELPERS_H
 
-
+#include <iostream>
+#include <vector>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <string.h>
+#include <unistd.h>
+#include <mutex>
+#include <queue>
+#include <fstream>
+#include <thread>
 #include "helperheaders.h"
 
-int initServer(const char* name, const char* port);
-
 int createSocket(const char* addr, const char* port, struct addrinfo **outai);
-
-void terminateServer(int sockfd);
 
 int rsend(int sockfd, addrinfo* ai, packet p);
 

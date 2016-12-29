@@ -5,5 +5,5 @@ set(CMAKE_CXX_STANDARD 11)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -pthread")
 
-set(SOURCE_FILES main.cpp helperheaders.h sockhelpers.h sockhelpers.cpp)
+set(SOURCE_FILES main.cpp helperheaders.h sockhelpers.h sockhelpers.cpp Channel.cpp Channel.h Server.cpp Server.h)
 add_executable(chatService ${SOURCE_FILES})

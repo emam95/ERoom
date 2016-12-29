@@ -2,76 +2,11 @@
 // Created by emam on 12/3/16.
 //
 
-#include <iostream>
-#include <vector>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <string.h>
-#include <unistd.h>
-#include <mutex>
-#include <queue>
-#include <fstream>
-#include <thread>
 #include "sockhelpers.h"
 
 #define ISspace(x) isspace((int)(x))
 
 std::mutex mu;
-
-int initServer(const char* name, const char* port)
-{
-    struct addrinfo hints, *servinfo, *p;
-    int err;
-    int sockfd;
-
-    memset(&hints, 0, sizeof hints);
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_DGRAM;
-    hints.ai_flags = AI_PASSIVE; // use my IP
-
-    if ((err = getaddrinfo(name, port, &hints, &servinfo)) != 0)
-    {
-        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(err));
-        exit(1);
-    }
-
-    // loop through all the results and bind to the first we can
-    for(p = servinfo; p != NULL; p = p->ai_next)
-    {
-        if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
-        {
-            perror("listener: socket");
-            continue;
-        }
-
-        if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1)
-        {
-            close(sockfd);
-            perror("listener: bind");
-            continue;
-        }
-
-        break;
-    }
-
-    if (p == NULL)
-    {
-        fprintf(stderr, "listener: failed to bind socket\n");
-        exit(1);
-    }
-
-    freeaddrinfo(servinfo);
-
-    std::cout << "Server: waiting for connections..." << std::endl;
-
-    return sockfd;
-
-}
-
-void terminateServer(int sockfd)
-{
-    close(sockfd);
-}
 
 int createSocket(const char* addr, const char* port, struct addrinfo **outai)
 {
@@ -140,7 +75,7 @@ int rsend(int sockfd, addrinfo* ai, const packet p)
         else if (rv == 0)
         {
             // timeout, socket does not have anything to read
-            std::cout << "time out occured" << std::endl;
+            //std::cout << "time out occured" << std::endl;
             continue;
         }
         else
@@ -187,8 +122,21 @@ void clientRecieve( entity e, std::queue<std::string> &mq, std::vector<entity> &
     }
 
     mu.lock();
+    mq.push(e.name + " has entered the channel");
+    mu.unlock();
+
+    sprintf(pack.data, "You entered channel %d", e.cid);
+
+    if ((rsend(sockfd, ai, pack)) == -1)
+    {
+        perror("RThread: sendto");
+        return;
+    }
+
+    usleep(1000);
+
+    mu.lock();
     entities.push_back(e);
-    mq.push(e.name + " has entered chat");
     mu.unlock();
 
     int numbytes;
@@ -199,7 +147,6 @@ void clientRecieve( entity e, std::queue<std::string> &mq, std::vector<entity> &
     {
         struct sockaddr_storage their_addr;
         int numbytes;
-        packet initpack;
         socklen_t addr_len;
         addr_len = sizeof their_addr;
 
