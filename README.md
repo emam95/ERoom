@@ -1,5 +1,12 @@
 # EROOM
-A multithreaded group chatting server where clients can connect and chat using reliable UDP connections
+A multithreaded real-time chat room server where clients can connect, chat and share files using reliable UDP connections.
+
+TO DO:
+------
+* Add Private messages
+* Add channels (public)
+* Add Private channels
+* Add more commands
 
 
 Sample Screenshots:
