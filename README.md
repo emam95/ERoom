@@ -14,7 +14,7 @@ TO DO:
 * Add channels (public)
 * Add Private channels
 * Add more commands
-* Encrypt the Messages
+* Encrypt the Messages (RSA and AES)
 
 
 Sample Screenshots:
